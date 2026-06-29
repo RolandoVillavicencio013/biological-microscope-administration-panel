@@ -1,6 +1,1 @@
-﻿namespace UCR.EB.BioMicroscopeAdmin.Backend.Presentation;
-
-public class Class1
-{
-
-}
+// Placeholder removed — see Dtos/, Mappers/, Handlers/, Endpoints/
