@@ -11,6 +11,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Backend.Domain\UCR.EB.BioMicroscopeAdmin.Backend.Domain.csproj" />
     <ProjectReference Include="..\Backend.Application\UCR.EB.BioMicroscopeAdmin.Backend.Application.csproj" />
   </ItemGroup>
