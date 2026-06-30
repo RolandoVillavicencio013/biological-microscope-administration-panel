@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: biomicroscope_db
+    environment:
+      POSTGRES_DB: biomicroscope_admin
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - biomicroscope_pgdata:/var/lib/postgresql
+    restart: unless-stopped
+
+volumes:
+  biomicroscope_pgdata:
