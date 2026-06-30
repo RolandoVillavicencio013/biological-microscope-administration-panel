@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using UCR.EB.BioMicroscopeAdmin.Backend.Domain;
 using UCR.EB.BioMicroscopeAdmin.Backend.Application;
@@ -13,11 +14,12 @@ namespace UCR.EB.BioMicroscopeAdmin.Backend.DependencyInjection;
 public static class DependencyInjection
 {
     /// <summary>Registers all layer services into the dependency injection container.</summary>
-    public static IServiceCollection AddCleanArchitectureServices(this IServiceCollection services)
+    public static IServiceCollection AddCleanArchitectureServices(
+        this IServiceCollection services, IConfiguration configuration)
     {
         services.AddDomainLayerServices();
         services.AddApplicationLayerServices();
-        services.AddInfrastructureLayerServices();
+        services.AddInfrastructureLayerServices(configuration);
         services.AddPresentationLayerServices();
         return services;
     }
