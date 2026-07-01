@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "clients": {
+    "BioMicroscopeApiClient": {
+      "descriptionLocation": "http://localhost:5000/swagger/v1/swagger.json",
+      "language": "CSharp",
+      "outputPath": "./ApiClient/Generated",
+      "namespace": "UCR.EB.BioMicroscopeAdmin.Frontend.Infrastructure.ApiClient.Generated"
+    }
+  }
+}

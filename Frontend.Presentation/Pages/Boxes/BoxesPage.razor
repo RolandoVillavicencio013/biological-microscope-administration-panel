@@ -1,0 +1,122 @@
+@page "/boxes"
+@inject IBoxService BoxService
+@inject IGroupService GroupService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Cajas</PageTitle>
+
+<MudTable Items="FilteredBoxes" Loading="_loading" Hover="true" Bordered="true" Striped="true">
+    <ToolBarContent>
+        <MudText Typo="Typo.h5">Cajas</MudText>
+        <MudSpacer />
+        <MudSelect T="int?" Value="_filterGroupId" ValueChanged="OnFilterChanged" Label="Filtrar por grupo"
+                   Clearable="true" Style="max-width:220px" Class="mr-4" Variant="Variant.Outlined">
+            @foreach (var g in _groups)
+            {
+                <MudSelectItem T="int?" Value="g.Id">@g.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <MudTooltip Text="Para crear cajas, use &quot;Nueva Lámina&quot; en la sección Láminas.">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Default" Size="Size.Small" />
+        </MudTooltip>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Id</MudTh>
+        <MudTh>Número</MudTh>
+        <MudTh>Nombre</MudTh>
+        <MudTh>Grupo</MudTh>
+        <MudTh Style="text-align:right">Acciones</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Id">@context.Id</MudTd>
+        <MudTd DataLabel="Número">@context.Number</MudTd>
+        <MudTd DataLabel="Nombre">@context.Name</MudTd>
+        <MudTd DataLabel="Grupo">@GroupName(context.GroupId)</MudTd>
+        <MudTd Style="text-align:right">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                           OnClick="@(() => OpenEdit(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                           OnClick="@(() => Delete(context))" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>No hay cajas registradas. Cree una lámina para generar cajas.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<BoxDto> _boxes = [];
+    private List<GroupDto> _groups = [];
+    private int? _filterGroupId;
+    private bool _loading = true;
+
+    private IEnumerable<BoxDto> FilteredBoxes =>
+        _filterGroupId is null ? _boxes : _boxes.Where(b => b.GroupId == _filterGroupId);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGroups();
+        await Load();
+    }
+
+    private async Task LoadGroups()
+    {
+        try { _groups = await GroupService.ListAllAsync(); }
+        catch (Exception ex) { Snackbar.Add($"Error al cargar grupos: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task Load()
+    {
+        _loading = true;
+        try { _boxes = await BoxService.ListAllAsync(); }
+        catch (Exception ex) { Snackbar.Add($"Error al cargar cajas: {ex.Message}", Severity.Error); }
+        finally { _loading = false; }
+    }
+
+    private void OnFilterChanged(int? value) => _filterGroupId = value;
+
+    private string GroupName(int groupId) =>
+        _groups.FirstOrDefault(g => g.Id == groupId)?.Name ?? groupId.ToString();
+
+    private async Task OpenEdit(BoxDto box)
+    {
+        var parameters = new DialogParameters<BoxFormDialog>
+        {
+            { x => x.Model, box },
+            { x => x.Groups, _groups }
+        };
+        var dialog = await DialogService.ShowAsync<BoxFormDialog>("Editar Caja", parameters);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled && result.Data is UpdateBoxDto dto)
+        {
+            try
+            {
+                await BoxService.UpdateAsync(box.Id, dto);
+                Snackbar.Add("Caja actualizada correctamente.", Severity.Success);
+                await Load();
+            }
+            catch (Exception ex) { Snackbar.Add($"Error al actualizar caja: {ex.Message}", Severity.Error); }
+        }
+    }
+
+    private async Task Delete(BoxDto box)
+    {
+        var parameters = new DialogParameters<ConfirmDeleteDialog>
+        {
+            { x => x.Message, $"¿Eliminar la caja \"{box.Name}\"?" }
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmDeleteDialog>("Confirmar eliminación", parameters);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled)
+        {
+            try
+            {
+                await BoxService.DeleteAsync(box.Id);
+                Snackbar.Add("Caja eliminada.", Severity.Success);
+                await Load();
+            }
+            catch (Exception ex) { Snackbar.Add($"Error al eliminar caja: {ex.Message}", Severity.Error); }
+        }
+    }
+}

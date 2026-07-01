@@ -1,0 +1,13 @@
+<Router AppAssembly="@typeof(App).Assembly"
+        AdditionalAssemblies="@(new[] { typeof(UCR.EB.BioMicroscopeAdmin.Frontend.Presentation.Layout.MainLayout).Assembly })">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData"
+                   DefaultLayout="@typeof(UCR.EB.BioMicroscopeAdmin.Frontend.Presentation.Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(UCR.EB.BioMicroscopeAdmin.Frontend.Presentation.Layout.MainLayout)">
+            <MudText>Página no encontrada.</MudText>
+        </LayoutView>
+    </NotFound>
+</Router>

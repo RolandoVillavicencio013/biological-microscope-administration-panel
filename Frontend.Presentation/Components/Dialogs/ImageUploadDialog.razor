@@ -1,0 +1,51 @@
+<MudDialog>
+    <TitleContent>Subir Imagen</TitleContent>
+    <DialogContent>
+        <MudStack>
+            <MudFileUpload T="IBrowserFile" FilesChanged="OnFileChanged" Accept="image/*">
+                <ActivatorContent>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.CloudUpload">
+                        Seleccionar archivo
+                    </MudButton>
+                </ActivatorContent>
+            </MudFileUpload>
+            @if (_file is not null)
+            {
+                <MudText Typo="Typo.body2">@_file.Name</MudText>
+            }
+            <MudSelect T="int" @bind-Value="_order" Label="Orden" Class="mt-3" Variant="Variant.Outlined">
+                @for (int i = 1; i <= 6; i++)
+                {
+                    var v = i;
+                    <MudSelectItem T="int" Value="v">@v</MudSelectItem>
+                }
+            </MudSelect>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(_file is null)">
+            Subir
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private IBrowserFile? _file;
+    private int _order = 1;
+
+    private void OnFileChanged(IBrowserFile? file) => _file = file;
+
+    private void Submit()
+    {
+        if (_file is null) return;
+        MudDialog.Close(DialogResult.Ok(new ImageUploadResult(_file, _order)));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    public record ImageUploadResult(IBrowserFile File, int Order);
+}

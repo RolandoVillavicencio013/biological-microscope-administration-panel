@@ -1,0 +1,330 @@
+@inject IGroupService GroupService
+@inject IBoxService BoxService
+@inject ISlideService SlideService
+@inject IImageService ImageService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Nueva Lámina</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form">
+
+            <!-- ===== 1. GRUPO ===== -->
+            <MudText Typo="Typo.subtitle1" Class="mt-1 mb-1"><strong>1. Grupo</strong></MudText>
+            <MudRadioGroup T="string" Value="_groupMode" ValueChanged="OnGroupModeChanged">
+                <MudRadio T="string" Value="@("existing")">Grupo existente</MudRadio>
+                <MudRadio T="string" Value="@("new")">Crear nuevo grupo</MudRadio>
+            </MudRadioGroup>
+
+            @if (_groupMode == "existing")
+            {
+                @if (_groups.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mt-1">
+                        No existen grupos. Seleccione "Crear nuevo grupo".
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudSelect T="int" Value="_selectedGroupId" ValueChanged="OnSelectedGroupChanged"
+                               Label="Grupo" Required="true" RequiredError="Seleccione un grupo."
+                               Class="mt-1" Variant="Variant.Outlined">
+                        @foreach (var g in _groups)
+                        {
+                            <MudSelectItem T="int" Value="g.Id">@g.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+            }
+            else
+            {
+                <MudTextField @bind-Value="_newGroupName" Label="Nombre del grupo"
+                              Required="true" MaxLength="100" RequiredError="El nombre del grupo es obligatorio."
+                              Class="mt-1" Variant="Variant.Outlined" />
+            }
+
+            <MudDivider Class="my-3" />
+
+            <!-- ===== 2. CAJA ===== -->
+            <MudText Typo="Typo.subtitle1" Class="mb-1"><strong>2. Caja</strong></MudText>
+            <MudRadioGroup T="string" Value="_boxMode" ValueChanged="OnBoxModeChanged">
+                <MudRadio T="string" Value="@("existing")" Disabled="@(_groupMode == "new")">Caja existente</MudRadio>
+                <MudRadio T="string" Value="@("new")">Crear nueva caja</MudRadio>
+            </MudRadioGroup>
+
+            @if (_boxMode == "existing")
+            {
+                var availableBoxes = FilteredBoxes.ToList();
+                @if (availableBoxes.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mt-1">
+                        No hay cajas en este grupo. Seleccione "Crear nueva caja".
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudSelect T="int" @bind-Value="_selectedBoxId" Label="Caja" Required="true"
+                               RequiredError="Seleccione una caja." Class="mt-1" Variant="Variant.Outlined">
+                        @foreach (var b in availableBoxes)
+                        {
+                            <MudSelectItem T="int" Value="b.Id">@b.Number - @b.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+            }
+            else
+            {
+                <MudNumericField @bind-Value="_newBoxNumber" Label="Número de caja"
+                                 Required="true" Min="1" Class="mt-1" Variant="Variant.Outlined" />
+                <MudTextField @bind-Value="_newBoxName" Label="Nombre de la caja"
+                              Required="true" MaxLength="150" RequiredError="El nombre de la caja es obligatorio."
+                              Class="mt-2" Variant="Variant.Outlined" />
+            }
+
+            <MudDivider Class="my-3" />
+
+            <!-- ===== 3. DATOS DE LA LÁMINA ===== -->
+            <MudText Typo="Typo.subtitle1" Class="mb-1"><strong>3. Datos de la Lámina</strong></MudText>
+            <MudTextField @bind-Value="_code" Label="Código" Required="true" MaxLength="20"
+                          RequiredError="El código es obligatorio." Variant="Variant.Outlined" />
+            <MudTextField @bind-Value="_name" Label="Nombre" Required="true" MaxLength="150"
+                          RequiredError="El nombre es obligatorio." Class="mt-2" Variant="Variant.Outlined" />
+            <MudTextField @bind-Value="_description" Label="Descripción" Lines="2" Class="mt-2" Variant="Variant.Outlined" />
+            <MudTextField @bind-Value="_observations" Label="Observaciones" Lines="2" Class="mt-2" Variant="Variant.Outlined" />
+
+            <MudDivider Class="my-3" />
+
+            <!-- ===== 4. IMÁGENES ===== -->
+            <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+                <MudText Typo="Typo.subtitle1"><strong>4. Imágenes</strong></MudText>
+                <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ml-2">opcional · máx. 6</MudChip>
+            </MudStack>
+
+            @for (int i = 0; i < _pendingImages.Count; i++)
+            {
+                var idx = i;
+                var img = _pendingImages[idx];
+                <MudPaper Elevation="1" Class="pa-2 mb-2">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Image" Color="Color.Primary" />
+                        <MudText Typo="Typo.body2"
+                                 Style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                            @img.FileName
+                        </MudText>
+                        <MudSelect T="int" Value="img.Order" ValueChanged="@((int v) => img.Order = v)"
+                                   Label="Orden" Style="width:85px" Dense="true" Variant="Variant.Outlined">
+                            @for (int o = 1; o <= 6; o++)
+                            {
+                                var order = o;
+                                <MudSelectItem T="int" Value="order">@order</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Error"
+                                       Size="Size.Small" OnClick="@(() => RemoveImage(idx))" />
+                    </MudStack>
+                </MudPaper>
+            }
+
+            @if (_pendingImages.Count < 6)
+            {
+                <MudFileUpload T="IBrowserFile" FilesChanged="OnImageAdded" Accept="image/*">
+                    <ActivatorContent>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.AddPhotoAlternate">
+                            Agregar imagen
+                        </MudButton>
+                    </ActivatorContent>
+                </MudFileUpload>
+            }
+
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_saving">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Creando...</span>
+            }
+            else
+            {
+                <span>Crear Lámina</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private MudForm _form = null!;
+    private bool _saving;
+
+    // Group
+    private List<GroupDto> _groups = [];
+    private string _groupMode = "existing";
+    private int _selectedGroupId;
+    private string _newGroupName = string.Empty;
+
+    // Box
+    private List<BoxDto> _allBoxes = [];
+    private string _boxMode = "existing";
+    private int _selectedBoxId;
+    private int _newBoxNumber = 1;
+    private string _newBoxName = string.Empty;
+
+    // Slide
+    private string _code = string.Empty;
+    private string _name = string.Empty;
+    private string? _description;
+    private string? _observations;
+
+    // Images
+    private readonly List<PendingImage> _pendingImages = [];
+
+    private IEnumerable<BoxDto> FilteredBoxes =>
+        _allBoxes.Where(b => b.GroupId == _selectedGroupId);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _groups = await GroupService.ListAllAsync();
+            _allBoxes = await BoxService.ListAllAsync();
+
+            if (_groups.Count > 0)
+            {
+                _selectedGroupId = _groups[0].Id;
+                var firstBox = FilteredBoxes.FirstOrDefault();
+                if (firstBox is not null) _selectedBoxId = firstBox.Id;
+            }
+            else
+            {
+                // No groups exist yet — start in "new" mode for both
+                _groupMode = "new";
+                _boxMode = "new";
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al cargar datos: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void OnGroupModeChanged(string mode)
+    {
+        _groupMode = mode;
+        if (mode == "new") _boxMode = "new";
+    }
+
+    private void OnBoxModeChanged(string mode) => _boxMode = mode;
+
+    private void OnSelectedGroupChanged(int groupId)
+    {
+        _selectedGroupId = groupId;
+        _selectedBoxId = 0;
+        var firstBox = FilteredBoxes.FirstOrDefault();
+        if (firstBox is not null) _selectedBoxId = firstBox.Id;
+    }
+
+    private void OnImageAdded(IBrowserFile? file)
+    {
+        if (file is null || _pendingImages.Count >= 6) return;
+        var nextOrder = _pendingImages.Count > 0
+            ? Math.Min(_pendingImages.Max(x => x.Order) + 1, 6)
+            : 1;
+        _pendingImages.Add(new PendingImage(file, file.Name, nextOrder));
+    }
+
+    private void RemoveImage(int index) => _pendingImages.RemoveAt(index);
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (!_form.IsValid) return;
+
+        if (_groupMode == "existing" && _selectedGroupId == 0)
+        {
+            Snackbar.Add("Debe seleccionar un grupo.", Severity.Warning);
+            return;
+        }
+        if (_boxMode == "existing" && _selectedBoxId == 0)
+        {
+            Snackbar.Add("Debe seleccionar una caja.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            // 1. Resolve or create group
+            int groupId;
+            if (_groupMode == "new")
+            {
+                var group = await GroupService.CreateAsync(new CreateGroupDto(_newGroupName));
+                groupId = group.Id;
+            }
+            else
+            {
+                groupId = _selectedGroupId;
+            }
+
+            // 2. Resolve or create box
+            int boxId;
+            if (_boxMode == "new")
+            {
+                var box = await BoxService.CreateAsync(new CreateBoxDto(_newBoxNumber, _newBoxName, groupId));
+                boxId = box.Id;
+            }
+            else
+            {
+                boxId = _selectedBoxId;
+            }
+
+            // 3. Create slide
+            var slide = await SlideService.CreateAsync(new CreateSlideDto(
+                _code, _name, boxId,
+                string.IsNullOrWhiteSpace(_description) ? null : _description,
+                string.IsNullOrWhiteSpace(_observations) ? null : _observations));
+
+            // 4. Upload any pending images
+            foreach (var img in _pendingImages)
+            {
+                try
+                {
+                    using var ms = new MemoryStream();
+                    await using var stream = img.File.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+                    await stream.CopyToAsync(ms);
+                    ms.Position = 0;
+                    await ImageService.UploadAsync(slide.Id, ms, img.FileName, img.Order);
+                }
+                catch (Exception ex)
+                {
+                    Snackbar.Add($"Error subiendo \"{img.FileName}\": {ex.Message}", Severity.Warning);
+                }
+            }
+
+            MudDialog.Close(DialogResult.Ok(slide.Id));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al crear la lámina: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private sealed class PendingImage(IBrowserFile? file, string fileName, int order)
+    {
+        public IBrowserFile? File { get; } = file;
+        public string FileName { get; } = fileName;
+        public int Order { get; set; } = order;
+    }
+}

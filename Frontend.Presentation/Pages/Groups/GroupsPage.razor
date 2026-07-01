@@ -1,0 +1,101 @@
+@page "/groups"
+@inject IGroupService GroupService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Grupos</PageTitle>
+
+<MudTable Items="_groups" Loading="_loading" Hover="true" Bordered="true" Striped="true">
+    <ToolBarContent>
+        <MudText Typo="Typo.h5">Grupos</MudText>
+        <MudSpacer />
+        <MudTooltip Text="Para crear grupos, use &quot;Nueva Lámina&quot; en la sección Láminas.">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Default" Size="Size.Small" />
+        </MudTooltip>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Id</MudTh>
+        <MudTh>Nombre</MudTh>
+        <MudTh Style="text-align:right">Acciones</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Id">@context.Id</MudTd>
+        <MudTd DataLabel="Nombre">@context.Name</MudTd>
+        <MudTd Style="text-align:right">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                           OnClick="@(() => OpenEdit(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                           OnClick="@(() => Delete(context))" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>No hay grupos registrados. Cree una lámina para generar grupos.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<GroupDto> _groups = [];
+    private bool _loading = true;
+
+    protected override Task OnInitializedAsync() => Load();
+
+    private async Task Load()
+    {
+        _loading = true;
+        try
+        {
+            _groups = await GroupService.ListAllAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al cargar grupos: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OpenEdit(GroupDto group)
+    {
+        var parameters = new DialogParameters<GroupFormDialog> { { x => x.Model, group } };
+        var dialog = await DialogService.ShowAsync<GroupFormDialog>("Editar Grupo", parameters);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled && result.Data is CreateGroupDto dto)
+        {
+            try
+            {
+                await GroupService.UpdateAsync(group.Id, dto);
+                Snackbar.Add("Grupo actualizado correctamente.", Severity.Success);
+                await Load();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error al actualizar grupo: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task Delete(GroupDto group)
+    {
+        var parameters = new DialogParameters<ConfirmDeleteDialog>
+        {
+            { x => x.Message, $"¿Eliminar el grupo \"{group.Name}\"?" }
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmDeleteDialog>("Confirmar eliminación", parameters);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled)
+        {
+            try
+            {
+                await GroupService.DeleteAsync(group.Id);
+                Snackbar.Add("Grupo eliminado.", Severity.Success);
+                await Load();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error al eliminar grupo: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}
