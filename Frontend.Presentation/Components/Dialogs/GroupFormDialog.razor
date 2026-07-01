@@ -1,0 +1,41 @@
+<MudDialog>
+    <TitleContent>@_title</TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form">
+            <MudTextField @bind-Value="_name" Label="Nombre" Required="true" RequiredError="El nombre es obligatorio."
+                          MaxLength="100" Immediate="true" Variant="Variant.Outlined" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Guardar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public GroupDto? Model { get; set; }
+
+    private MudForm _form = null!;
+    private string _name = string.Empty;
+    private string _title = "Nuevo Grupo";
+
+    protected override void OnInitialized()
+    {
+        if (Model is not null)
+        {
+            _name = Model.Name;
+            _title = "Editar Grupo";
+        }
+    }
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (!_form.IsValid) return;
+        MudDialog.Close(DialogResult.Ok(new CreateGroupDto(_name)));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

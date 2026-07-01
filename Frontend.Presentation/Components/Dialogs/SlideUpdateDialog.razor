@@ -1,0 +1,39 @@
+<MudDialog>
+    <TitleContent>Editar Lámina</TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form">
+            <MudTextField @bind-Value="_description" Label="Descripción" Lines="3" Variant="Variant.Outlined" />
+            <MudTextField @bind-Value="_observations" Label="Observaciones" Lines="3" Class="mt-3" Variant="Variant.Outlined" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Guardar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public string? Observations { get; set; }
+
+    private MudForm _form = null!;
+    private string? _description;
+    private string? _observations;
+
+    protected override void OnInitialized()
+    {
+        _description = Description;
+        _observations = Observations;
+    }
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(new UpdateSlideDto(
+            string.IsNullOrWhiteSpace(_description) ? null : _description,
+            string.IsNullOrWhiteSpace(_observations) ? null : _observations)));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

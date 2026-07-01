@@ -1,0 +1,173 @@
+@page "/slides/{Id:int}"
+@inject ISlideService SlideService
+@inject IImageService ImageService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Detalle de Lámina</PageTitle>
+
+<MudButton StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("/slides"))" Class="mb-4">
+    Volver
+</MudButton>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (_slide is null)
+{
+    <MudAlert Severity="Severity.Error">No se encontró la lámina.</MudAlert>
+}
+else
+{
+    <MudCard Class="mb-4">
+        <MudCardContent>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudText Typo="Typo.h5">@_slide.Code - @_slide.Name</MudText>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Edit" OnClick="EditSlide">
+                    Editar
+                </MudButton>
+            </MudStack>
+            <MudDivider Class="my-3" />
+            <MudText Typo="Typo.subtitle2">Descripción</MudText>
+            <MudText Typo="Typo.body2" Class="mb-2">@(_slide.Description ?? "(Sin descripción)")</MudText>
+            <MudText Typo="Typo.subtitle2">Observaciones</MudText>
+            <MudText Typo="Typo.body2">@(_slide.Observations ?? "(Sin observaciones)")</MudText>
+        </MudCardContent>
+    </MudCard>
+
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-3">
+        <MudText Typo="Typo.h6">Imágenes</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.AddPhotoAlternate" OnClick="UploadImage">
+            Subir Imagen
+        </MudButton>
+    </MudStack>
+
+    @if (_slide.Images.Count == 0)
+    {
+        <MudText>No hay imágenes para esta lámina.</MudText>
+    }
+    else
+    {
+        <MudGrid>
+            @foreach (var image in _slide.Images.OrderBy(i => i.Order))
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard>
+                        <MudCardMedia Image="@image.FileUrl" Height="200" />
+                        <MudCardContent>
+                            <MudText Typo="Typo.body2">@image.FileName</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary">Orden: @image.Order</MudChip>
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudIconButton Icon="@Icons.Material.Filled.SwapVert" Color="Color.Primary"
+                                           OnClick="@(() => ChangeOrder(image))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                                           OnClick="@(() => DeleteImage(image))" />
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private SlideDetailDto? _slide;
+    private bool _loading = true;
+
+    protected override Task OnInitializedAsync() => Load();
+
+    private async Task Load()
+    {
+        _loading = true;
+        try { _slide = await SlideService.FindByIdAsync(Id); }
+        catch (Exception ex) { Snackbar.Add($"Error al cargar la lámina: {ex.Message}", Severity.Error); }
+        finally { _loading = false; }
+    }
+
+    private async Task EditSlide()
+    {
+        if (_slide is null) return;
+        var parameters = new DialogParameters<SlideUpdateDialog>
+        {
+            { x => x.Description, _slide.Description },
+            { x => x.Observations, _slide.Observations }
+        };
+        var dialog = await DialogService.ShowAsync<SlideUpdateDialog>("Editar Lámina", parameters);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled && result.Data is UpdateSlideDto dto)
+        {
+            try
+            {
+                await SlideService.UpdateAsync(_slide.Id, dto);
+                Snackbar.Add("Lámina actualizada.", Severity.Success);
+                await Load();
+            }
+            catch (Exception ex) { Snackbar.Add($"Error al actualizar: {ex.Message}", Severity.Error); }
+        }
+    }
+
+    private async Task UploadImage()
+    {
+        if (_slide is null) return;
+        var dialog = await DialogService.ShowAsync<ImageUploadDialog>("Subir Imagen");
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled && result.Data is ImageUploadDialog.ImageUploadResult upload)
+        {
+            try
+            {
+                await using var stream = upload.File.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+                using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                ms.Position = 0;
+                await ImageService.UploadAsync(_slide.Id, ms, upload.File.Name, upload.Order);
+                Snackbar.Add("Imagen subida correctamente.", Severity.Success);
+                await Load();
+            }
+            catch (Exception ex) { Snackbar.Add($"Error al subir imagen: {ex.Message}", Severity.Error); }
+        }
+    }
+
+    private async Task ChangeOrder(ImageDto image)
+    {
+        var parameters = new DialogParameters<ImageOrderDialog> { { x => x.Order, image.Order } };
+        var dialog = await DialogService.ShowAsync<ImageOrderDialog>("Cambiar Orden", parameters);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled && result.Data is UpdateImageOrderDto dto)
+        {
+            try
+            {
+                await ImageService.UpdateOrderAsync(image.Id, dto);
+                Snackbar.Add("Orden actualizado.", Severity.Success);
+                await Load();
+            }
+            catch (Exception ex) { Snackbar.Add($"Error al cambiar orden: {ex.Message}", Severity.Error); }
+        }
+    }
+
+    private async Task DeleteImage(ImageDto image)
+    {
+        var parameters = new DialogParameters<ConfirmDeleteDialog>
+        {
+            { x => x.Message, $"¿Eliminar la imagen \"{image.FileName}\"?" }
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmDeleteDialog>("Confirmar eliminación", parameters);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled)
+        {
+            try
+            {
+                await ImageService.DeleteAsync(image.Id);
+                Snackbar.Add("Imagen eliminada.", Severity.Success);
+                await Load();
+            }
+            catch (Exception ex) { Snackbar.Add($"Error al eliminar imagen: {ex.Message}", Severity.Error); }
+        }
+    }
+}

@@ -1,0 +1,63 @@
+<MudDialog>
+    <TitleContent>@_title</TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form">
+            <MudNumericField @bind-Value="_number" Label="Número" Required="true" Min="1"
+                             RequiredError="El número es obligatorio." Variant="Variant.Outlined" />
+            <MudTextField @bind-Value="_name" Label="Nombre" Required="true" MaxLength="150"
+                          RequiredError="El nombre es obligatorio." Class="mt-3" Variant="Variant.Outlined" />
+            <MudSelect T="int" @bind-Value="_groupId" Label="Grupo" Required="true" Disabled="@(Model is not null)"
+                       RequiredError="Debe seleccionar un grupo." Class="mt-3" Variant="Variant.Outlined">
+                @foreach (var g in Groups)
+                {
+                    <MudSelectItem T="int" Value="g.Id">@g.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Guardar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public BoxDto? Model { get; set; }
+    [Parameter] public List<GroupDto> Groups { get; set; } = [];
+
+    private MudForm _form = null!;
+    private int _number = 1;
+    private string _name = string.Empty;
+    private int _groupId;
+    private string _title = "Nueva Caja";
+
+    protected override void OnInitialized()
+    {
+        if (Model is not null)
+        {
+            _number = Model.Number;
+            _name = Model.Name;
+            _groupId = Model.GroupId;
+            _title = "Editar Caja";
+        }
+        else if (Groups.Count > 0)
+        {
+            _groupId = Groups[0].Id;
+        }
+    }
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (!_form.IsValid) return;
+
+        if (Model is null)
+            MudDialog.Close(DialogResult.Ok<object>(new CreateBoxDto(_number, _name, _groupId)));
+        else
+            MudDialog.Close(DialogResult.Ok<object>(new UpdateBoxDto(_number, _name)));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

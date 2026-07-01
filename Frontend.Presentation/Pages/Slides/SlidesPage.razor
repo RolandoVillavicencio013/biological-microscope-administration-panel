@@ -1,0 +1,119 @@
+@page "/slides"
+@inject ISlideService SlideService
+@inject IBoxService BoxService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Láminas</PageTitle>
+
+<MudTable Items="FilteredSlides" Loading="_loading" Hover="true" Bordered="true" Striped="true">
+    <ToolBarContent>
+        <MudText Typo="Typo.h5">Láminas</MudText>
+        <MudSpacer />
+        <MudSelect T="int?" Value="_filterBoxId" ValueChanged="OnFilterChanged" Label="Filtrar por caja"
+                   Clearable="true" Style="max-width:220px" Class="mr-4" Variant="Variant.Outlined">
+            @foreach (var b in _boxes)
+            {
+                <MudSelectItem T="int?" Value="b.Id">@b.Number - @b.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreate">
+            Nueva Lámina
+        </MudButton>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Id</MudTh>
+        <MudTh>Código</MudTh>
+        <MudTh>Nombre</MudTh>
+        <MudTh>Caja</MudTh>
+        <MudTh Style="text-align:right">Acciones</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Id">@context.Id</MudTd>
+        <MudTd DataLabel="Código">@context.Code</MudTd>
+        <MudTd DataLabel="Nombre">@context.Name</MudTd>
+        <MudTd DataLabel="Caja">@BoxName(context.BoxId)</MudTd>
+        <MudTd Style="text-align:right">
+            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" Size="Size.Small"
+                           OnClick="@(() => ViewDetail(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                           OnClick="@(() => Delete(context))" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>No hay láminas registradas.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<SlideDto> _slides = [];
+    private List<BoxDto> _boxes = [];
+    private int? _filterBoxId;
+    private bool _loading = true;
+
+    private IEnumerable<SlideDto> FilteredSlides =>
+        _filterBoxId is null ? _slides : _slides.Where(s => s.BoxId == _filterBoxId);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBoxes();
+        await Load();
+    }
+
+    private async Task LoadBoxes()
+    {
+        try { _boxes = await BoxService.ListAllAsync(); }
+        catch (Exception ex) { Snackbar.Add($"Error al cargar cajas: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task Load()
+    {
+        _loading = true;
+        try { _slides = await SlideService.ListAllAsync(); }
+        catch (Exception ex) { Snackbar.Add($"Error al cargar láminas: {ex.Message}", Severity.Error); }
+        finally { _loading = false; }
+    }
+
+    private void OnFilterChanged(int? value) => _filterBoxId = value;
+
+    private string BoxName(int boxId)
+    {
+        var b = _boxes.FirstOrDefault(x => x.Id == boxId);
+        return b is null ? boxId.ToString() : $"{b.Number} - {b.Name}";
+    }
+
+    private void ViewDetail(SlideDto slide) => Nav.NavigateTo($"/slides/{slide.Id}");
+
+    private async Task OpenCreate()
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = true };
+        var dialog = await DialogService.ShowAsync<SlideFormDialog>("Nueva Lámina", options);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled && result.Data is int slideId)
+        {
+            Nav.NavigateTo($"/slides/{slideId}");
+        }
+    }
+
+    private async Task Delete(SlideDto slide)
+    {
+        var parameters = new DialogParameters<ConfirmDeleteDialog>
+        {
+            { x => x.Message, $"¿Eliminar la lámina \"{slide.Name}\"?" }
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmDeleteDialog>("Confirmar eliminación", parameters);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled)
+        {
+            try
+            {
+                await SlideService.DeleteAsync(slide.Id);
+                Snackbar.Add("Lámina eliminada.", Severity.Success);
+                await Load();
+            }
+            catch (Exception ex) { Snackbar.Add($"Error al eliminar lámina: {ex.Message}", Severity.Error); }
+        }
+    }
+}
