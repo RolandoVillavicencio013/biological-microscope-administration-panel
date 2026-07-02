@@ -291,6 +291,7 @@
                 string.IsNullOrWhiteSpace(_observations) ? null : _observations));
 
             // 4. Upload any pending images
+            var imageErrors = 0;
             foreach (var img in _pendingImages)
             {
                 try
@@ -303,8 +304,23 @@
                 }
                 catch (Exception ex)
                 {
+                    imageErrors++;
                     Snackbar.Add($"Error subiendo \"{img.FileName}\": {ex.Message}", Severity.Warning);
                 }
+            }
+
+            // 5. Close dialog with success
+            if (imageErrors > 0 && imageErrors == _pendingImages.Count)
+            {
+                Snackbar.Add($"Lámina creada pero {imageErrors} imagen(es) no se subieron.", Severity.Warning);
+            }
+            else if (imageErrors > 0)
+            {
+                Snackbar.Add($"Lámina creada. {imageErrors} imagen(es) no se subieron.", Severity.Info);
+            }
+            else if (_pendingImages.Count > 0)
+            {
+                Snackbar.Add("Lámina creada exitosamente.", Severity.Success);
             }
 
             MudDialog.Close(DialogResult.Ok(slide.Id));
@@ -312,6 +328,8 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Error al crear la lámina: {ex.Message}", Severity.Error);
+            _saving = false;
+            return;
         }
         finally
         {
