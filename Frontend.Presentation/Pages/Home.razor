@@ -7,9 +7,10 @@
     Gestione los grupos biológicos, las cajas físicas, las láminas de microscopio y sus imágenes asociadas.
 </MudText>
 
-<MudGrid>
-    <MudItem xs="12" sm="6" md="4">
-        <MudCard>
+<MudStack Row="true" Spacing="3" Wrap="Wrap.Wrap">
+    <!-- Grupos Card -->
+    <div style="width: 300px; flex-shrink: 0;">
+        <MudCard Style="height: 100%;">
             <MudCardContent>
                 <MudIcon Icon="@Icons.Material.Filled.Category" Color="Color.Primary" Size="Size.Large" />
                 <MudText Typo="Typo.h6" Class="mt-2">Grupos</MudText>
@@ -19,9 +20,11 @@
                 <MudButton Href="/groups" Color="Color.Primary">Ir a Grupos</MudButton>
             </MudCardActions>
         </MudCard>
-    </MudItem>
-    <MudItem xs="12" sm="6" md="4">
-        <MudCard>
+    </div>
+
+    <!-- Cajas Card -->
+    <div style="width: 300px; flex-shrink: 0;">
+        <MudCard Style="height: 100%;">
             <MudCardContent>
                 <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" Size="Size.Large" />
                 <MudText Typo="Typo.h6" Class="mt-2">Cajas</MudText>
@@ -31,9 +34,11 @@
                 <MudButton Href="/boxes" Color="Color.Primary">Ir a Cajas</MudButton>
             </MudCardActions>
         </MudCard>
-    </MudItem>
-    <MudItem xs="12" sm="6" md="4">
-        <MudCard>
+    </div>
+
+    <!-- Láminas Card -->
+    <div style="width: 300px; flex-shrink: 0;">
+        <MudCard Style="height: 100%;">
             <MudCardContent>
                 <MudIcon Icon="@Icons.Material.Filled.Science" Color="Color.Primary" Size="Size.Large" />
                 <MudText Typo="Typo.h6" Class="mt-2">Láminas</MudText>
@@ -43,5 +48,5 @@
                 <MudButton Href="/slides" Color="Color.Primary">Ir a Láminas</MudButton>
             </MudCardActions>
         </MudCard>
-    </MudItem>
-</MudGrid>
+    </div>
+</MudStack>
