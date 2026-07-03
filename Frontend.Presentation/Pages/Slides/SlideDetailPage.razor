@@ -1,9 +1,14 @@
 @page "/slides/{Id:int}"
+@using System.Linq
+@using Microsoft.Extensions.Configuration
 @inject ISlideService SlideService
 @inject IImageService ImageService
+@inject IBoxService BoxService
+@inject IGroupService GroupService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
+@inject IConfiguration Configuration
 
 <PageTitle>Detalle de Lámina</PageTitle>
 
@@ -30,6 +35,20 @@ else
                     Editar
                 </MudButton>
             </MudStack>
+            <MudStack Row="true" Spacing="2" Class="mt-2">
+                @if (_group is not null)
+                {
+                    <MudChip T="string" Icon="@Icons.Material.Filled.Category" Color="Color.Secondary" Size="Size.Small">
+                        Grupo: @_group.Name
+                    </MudChip>
+                }
+                @if (_box is not null)
+                {
+                    <MudChip T="string" Icon="@Icons.Material.Filled.Inventory2" Color="Color.Info" Size="Size.Small">
+                        Caja @_box.Number: @_box.Name
+                    </MudChip>
+                }
+            </MudStack>
             <MudDivider Class="my-3" />
             <MudText Typo="Typo.subtitle2">Descripción</MudText>
             <MudText Typo="Typo.body2" Class="mb-2">@(_slide.Description ?? "(Sin descripción)")</MudText>
@@ -40,55 +59,93 @@ else
 
     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-3">
         <MudText Typo="Typo.h6">Imágenes</MudText>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                   StartIcon="@Icons.Material.Filled.AddPhotoAlternate" OnClick="UploadImage">
-            Subir Imagen
-        </MudButton>
+        <MudTooltip Text="@(_images.Count >= MaxImages ? $"Máximo {MaxImages} imágenes por lámina" : null)">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.AddPhotoAlternate" OnClick="UploadImage"
+                       Disabled="@(_images.Count >= MaxImages)">
+                Subir Imagen
+            </MudButton>
+        </MudTooltip>
     </MudStack>
 
-    @if (_slide.Images.Count == 0)
+    @if (_images.Count == 0)
     {
         <MudText>No hay imágenes para esta lámina.</MudText>
     }
     else
     {
-        <MudGrid>
-            @foreach (var image in _slide.Images.OrderBy(i => i.Order))
-            {
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard>
-                        <MudCardMedia Image="@image.FileUrl" Height="200" />
-                        <MudCardContent>
-                            <MudText Typo="Typo.body2">@image.FileName</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Primary">Orden: @image.Order</MudChip>
-                        </MudCardContent>
-                        <MudCardActions>
-                            <MudIconButton Icon="@Icons.Material.Filled.SwapVert" Color="Color.Primary"
-                                           OnClick="@(() => ChangeOrder(image))" />
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
-                                           OnClick="@(() => DeleteImage(image))" />
-                        </MudCardActions>
-                    </MudCard>
-                </MudItem>
-            }
-        </MudGrid>
+        <MudText Typo="Typo.body2" Class="mb-2 mud-text-secondary">
+            Arrastre las imágenes para cambiar su orden.
+        </MudText>
+        <MudDropContainer T="ImageDto" @ref="_dropContainer" Items="_images"
+                          ItemsSelector="@((item, zone) => true)"
+                          ItemDropped="OnImageDropped">
+            <ChildContent>
+                <MudDropZone T="ImageDto" Identifier="images" AllowReorder="true"
+                             Class="d-flex flex-wrap gap-4" />
+            </ChildContent>
+            <ItemRenderer>
+                <MudCard Style="width: 250px; cursor: grab;">
+                    <MudCardMedia Image="@ResolveImageUrl(context.FileUrl)" Height="200" />
+                    <MudCardContent>
+                        <MudText Typo="Typo.body2">@context.FileName</MudText>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">Orden: @context.Order</MudChip>
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                                       OnClick="@(() => DeleteImage(context))" />
+                    </MudCardActions>
+                </MudCard>
+            </ItemRenderer>
+        </MudDropContainer>
     }
 }
 
 @code {
     [Parameter] public int Id { get; set; }
 
+    private const int MaxImages = 6;
+
     private SlideDetailDto? _slide;
+    private BoxDto? _box;
+    private GroupDto? _group;
     private bool _loading = true;
+    private List<ImageDto> _images = [];
+    private MudDropContainer<ImageDto>? _dropContainer;
+
+    private string ResolveImageUrl(string fileUrl)
+    {
+        // On Unix runtimes (incl. WASM) "/uploads/x.png" parses as an absolute file:// URI,
+        // so only treat real web URLs as already-absolute.
+        if (Uri.TryCreate(fileUrl, UriKind.Absolute, out var uri) &&
+            (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+        {
+            return fileUrl;
+        }
+        var encodedPath = string.Join('/', fileUrl.Split('/').Select(Uri.EscapeDataString));
+        var baseUrl = (Configuration["ApiBaseUrl"] ?? "http://localhost:5138/").TrimEnd('/');
+        return $"{baseUrl}{encodedPath}";
+    }
 
     protected override Task OnInitializedAsync() => Load();
 
     private async Task Load()
     {
         _loading = true;
-        try { _slide = await SlideService.FindByIdAsync(Id); }
+        try
+        {
+            _slide = await SlideService.FindByIdAsync(Id);
+            _images = _slide?.Images.OrderBy(i => i.Order).ToList() ?? [];
+            _box = _slide is null ? null : await BoxService.FindByIdAsync(_slide.BoxId);
+            _group = _box is null ? null : await GroupService.FindByIdAsync(_box.GroupId);
+        }
         catch (Exception ex) { Snackbar.Add($"Error al cargar la lámina: {ex.Message}", Severity.Error); }
-        finally { _loading = false; }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+            _dropContainer?.Refresh();
+        }
     }
 
     private async Task EditSlide()
@@ -122,11 +179,15 @@ else
         {
             try
             {
+                // El backend admite órdenes 1..6; se usa el menor valor libre.
+                var used = _images.Select(i => i.Order).ToHashSet();
+                var nextOrder = Enumerable.Range(1, MaxImages).First(o => !used.Contains(o));
+
                 await using var stream = upload.File.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
                 using var ms = new MemoryStream();
                 await stream.CopyToAsync(ms);
                 ms.Position = 0;
-                await ImageService.UploadAsync(_slide.Id, ms, upload.File.Name, upload.Order);
+                await ImageService.UploadAsync(_slide.Id, ms, upload.File.Name, nextOrder);
                 Snackbar.Add("Imagen subida correctamente.", Severity.Success);
                 await Load();
             }
@@ -134,21 +195,22 @@ else
         }
     }
 
-    private async Task ChangeOrder(ImageDto image)
+    private async Task OnImageDropped(MudItemDropInfo<ImageDto> dropInfo)
     {
-        var parameters = new DialogParameters<ImageOrderDialog> { { x => x.Order, image.Order } };
-        var dialog = await DialogService.ShowAsync<ImageOrderDialog>("Cambiar Orden", parameters);
-        var result = await dialog.Result;
-        if (result is not null && !result.Canceled && result.Data is UpdateImageOrderDto dto)
+        if (dropInfo.Item is null) return;
+        var reordered = _images.Where(i => i.Id != dropInfo.Item.Id).ToList();
+        reordered.Insert(Math.Clamp(dropInfo.IndexInZone, 0, reordered.Count), dropInfo.Item);
+        try
         {
-            try
+            for (var i = 0; i < reordered.Count; i++)
             {
-                await ImageService.UpdateOrderAsync(image.Id, dto);
-                Snackbar.Add("Orden actualizado.", Severity.Success);
-                await Load();
+                if (reordered[i].Order != i + 1)
+                    await ImageService.UpdateOrderAsync(reordered[i].Id, new UpdateImageOrderDto(i + 1));
             }
-            catch (Exception ex) { Snackbar.Add($"Error al cambiar orden: {ex.Message}", Severity.Error); }
+            Snackbar.Add("Orden actualizado.", Severity.Success);
         }
+        catch (Exception ex) { Snackbar.Add($"Error al cambiar orden: {ex.Message}", Severity.Error); }
+        await Load();
     }
 
     private async Task DeleteImage(ImageDto image)

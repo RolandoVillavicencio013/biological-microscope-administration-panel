@@ -23,7 +23,12 @@ if (app.Environment.IsDevelopment())
     app.UseCors();
 }
 
-app.UseHttpsRedirection();
+// En desarrollo el frontend consume la API por HTTP; redirigir a HTTPS
+// rompe la carga de imágenes en navegadores que no confían en el certificado dev.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseStaticFiles();
 
 app.MapEndpoints();

@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
+@using UCR.EB.BioMicroscopeAdmin.Frontend.Presentation.Theme
 
-<MudThemeProvider />
+<MudThemeProvider Theme="@UcrTheme.Theme" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -8,8 +9,13 @@
     <MudAppBar Elevation="1">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@ToggleDrawer" />
         <MudText Typo="Typo.h6">BioMicroscopio Admin</MudText>
+        <MudSpacer />
+        <MudText Typo="Typo.body2" Class="d-none d-sm-flex">Universidad de Costa Rica</MudText>
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen" Elevation="2">
+        <MudDrawerHeader Class="d-flex justify-center py-6">
+            <img src="images/ucr-logo.png" alt="Universidad de Costa Rica" style="max-width: 170px; width: 100%;" />
+        </MudDrawerHeader>
         <NavMenu />
     </MudDrawer>
     <MudMainContent>
