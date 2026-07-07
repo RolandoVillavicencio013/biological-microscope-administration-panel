@@ -1,0 +1,90 @@
+@page "/guia-de-uso"
+
+<PageTitle>Guía de Uso - BioMicroscopio Admin</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Guía de Uso</MudText>
+<MudText Typo="Typo.body1" Class="mb-6">
+    El sistema organiza la colección en tres niveles: <strong>Grupos</strong> contienen <strong>Cajas</strong>,
+    y las Cajas contienen <strong>Láminas</strong>. Cada lámina puede tener hasta 6 imágenes asociadas.
+</MudText>
+
+<MudExpansionPanels MultiExpansion="true" Elevation="1">
+    <MudExpansionPanel Text="1. Crear una lámina nueva" Expanded="true">
+        <MudText Typo="Typo.body1" Class="mb-2">
+            Todo empieza en la sección <strong>Láminas</strong>, con el botón "Nueva Lámina". El formulario
+            se completa en un solo paso:
+        </MudText>
+        <MudList T="string">
+            <MudListItem Icon="@Icons.Material.Filled.ChevronRight">
+                <strong>Grupo:</strong> elija un grupo existente o cree uno nuevo escribiendo su nombre.
+            </MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.ChevronRight">
+                <strong>Caja:</strong> elija una caja existente dentro del grupo seleccionado, o cree una
+                nueva indicando su número y nombre. Si el grupo es nuevo, la caja también debe ser nueva.
+            </MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.ChevronRight">
+                <strong>Datos de la lámina:</strong> código, nombre, descripción y observaciones (estas dos
+                últimas son opcionales).
+            </MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.ChevronRight">
+                <strong>Imágenes (opcional):</strong> puede agregar hasta 6 imágenes desde el mismo formulario,
+                asignando el orden de cada una. También puede agregarlas después desde el detalle de la lámina.
+            </MudListItem>
+        </MudList>
+        <MudAlert Severity="Severity.Info" Class="mt-3" Dense="true">
+            Los Grupos y las Cajas no tienen un botón de creación propio: siempre se crean como parte de este
+            formulario, la primera vez que se necesitan.
+        </MudAlert>
+    </MudExpansionPanel>
+
+    <MudExpansionPanel Text="2. Administrar Grupos y Cajas">
+        <MudText Typo="Typo.body1" Class="mb-2">
+            Desde las secciones <strong>Grupos</strong> y <strong>Cajas</strong> puede renombrar o eliminar
+            los registros existentes. La sección Cajas permite además filtrar por grupo.
+        </MudText>
+        <MudAlert Severity="Severity.Warning" Dense="true">
+            Eliminar un grupo o una caja elimina también las cajas o láminas que contiene. Use el diálogo de
+            confirmación para revisar antes de continuar.
+        </MudAlert>
+    </MudExpansionPanel>
+
+    <MudExpansionPanel Text="3. Administrar Láminas">
+        <MudText Typo="Typo.body1" Class="mb-2">
+            La sección <strong>Láminas</strong> lista todas las láminas registradas y permite filtrar por caja.
+            Desde ahí puede:
+        </MudText>
+        <MudList T="string">
+            <MudListItem Icon="@Icons.Material.Filled.Visibility">
+                Abrir el detalle de una lámina (ícono de ojo) para ver y administrar sus imágenes.
+            </MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Delete">
+                Eliminar una lámina (ícono de basura), con confirmación previa.
+            </MudListItem>
+        </MudList>
+    </MudExpansionPanel>
+
+    <MudExpansionPanel Text="4. Administrar las imágenes de una lámina">
+        <MudText Typo="Typo.body1" Class="mb-2">
+            Desde el detalle de una lámina puede:
+        </MudText>
+        <MudList T="string">
+            <MudListItem Icon="@Icons.Material.Filled.AddPhotoAlternate">
+                Subir una nueva imagen (mientras haya menos de 6), indicando su orden.
+            </MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.DragIndicator">
+                Reordenar las imágenes arrastrándolas a la posición deseada.
+            </MudListItem>
+            <MudListItem Icon="@Icons.Material.Filled.Delete">
+                Eliminar una imagen individual.
+            </MudListItem>
+        </MudList>
+    </MudExpansionPanel>
+
+    <MudExpansionPanel Text="5. Documentación de la API">
+        <MudText Typo="Typo.body1">
+            Si necesita integrar otro sistema con esta administración, la pestaña
+            <strong>Documentación API</strong> del menú abre la referencia interactiva (Swagger) de todos los
+            endpoints disponibles, en una pestaña nueva del navegador.
+        </MudText>
+    </MudExpansionPanel>
+</MudExpansionPanels>

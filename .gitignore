@@ -291,6 +291,15 @@ FakesAssemblies/
 .ntvs_analysis.dat
 node_modules/
 
+# Electron desktop packaging output
+Electron/dist/
+Electron/resources/backend/*
+!Electron/resources/backend/.gitkeep
+build/
+
+# Locally uploaded slide images (dev-only local file storage)
+Backend.Api/wwwroot/
+
 # Visual Studio 6 build log
 *.plg
 
