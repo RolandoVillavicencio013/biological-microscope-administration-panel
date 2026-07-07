@@ -7,10 +7,14 @@
 
 <PageTitle>Láminas</PageTitle>
 
-<MudTable Items="FilteredSlides" Loading="_loading" Hover="true" Bordered="true" Striped="true">
+<MudTable ServerData="ServerReload" @ref="_table" RowsPerPage="20" Loading="_loading" Hover="true" Bordered="true" Striped="true">
     <ToolBarContent>
         <MudText Typo="Typo.h5">Láminas</MudText>
         <MudSpacer />
+        <MudTextField T="string" @bind-Value="_searchText" Immediate="true" DebounceInterval="400"
+                       OnDebounceIntervalElapsed="OnSearchChanged" Label="Buscar por código o nombre"
+                       Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true"
+                       Style="max-width:280px" Class="mr-4" Variant="Variant.Outlined" />
         <MudSelect T="int?" Value="_filterBoxId" ValueChanged="OnFilterChanged" Label="Filtrar por caja"
                    Clearable="true" Style="max-width:220px" Class="mr-4" Variant="Variant.Outlined">
             @foreach (var b in _boxes)
@@ -45,22 +49,20 @@
     <NoRecordsContent>
         <MudText>No hay láminas registradas.</MudText>
     </NoRecordsContent>
+    <PagerContent>
+        <MudTablePager RowsPerPageString="Filas por página:" InfoFormat="{first_item}-{last_item} de {all_items}"
+                       AllItemsText="Todos" />
+    </PagerContent>
 </MudTable>
 
 @code {
-    private List<SlideDto> _slides = [];
+    private MudTable<SlideDto> _table = null!;
     private List<BoxDto> _boxes = [];
     private int? _filterBoxId;
-    private bool _loading = true;
+    private string _searchText = "";
+    private bool _loading;
 
-    private IEnumerable<SlideDto> FilteredSlides =>
-        _filterBoxId is null ? _slides : _slides.Where(s => s.BoxId == _filterBoxId);
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadBoxes();
-        await Load();
-    }
+    protected override async Task OnInitializedAsync() => await LoadBoxes();
 
     private async Task LoadBoxes()
     {
@@ -68,15 +70,33 @@
         catch (Exception ex) { Snackbar.Add($"Error al cargar cajas: {ex.Message}", Severity.Error); }
     }
 
-    private async Task Load()
+    private async Task<TableData<SlideDto>> ServerReload(TableState state, CancellationToken cancellationToken)
     {
         _loading = true;
-        try { _slides = await SlideService.ListAllAsync(); }
-        catch (Exception ex) { Snackbar.Add($"Error al cargar láminas: {ex.Message}", Severity.Error); }
+        try
+        {
+            var result = await SlideService.SearchAsync(_searchText, _filterBoxId, state.Page + 1, state.PageSize);
+            return new TableData<SlideDto> { TotalItems = result.TotalCount, Items = result.Items };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al cargar láminas: {ex.Message}", Severity.Error);
+            return new TableData<SlideDto> { TotalItems = 0, Items = [] };
+        }
         finally { _loading = false; }
     }
 
-    private void OnFilterChanged(int? value) => _filterBoxId = value;
+    private async Task OnFilterChanged(int? value)
+    {
+        _filterBoxId = value;
+        await _table.ReloadServerData();
+    }
+
+    private async Task OnSearchChanged(string value)
+    {
+        _searchText = value;
+        await _table.ReloadServerData();
+    }
 
     private string BoxName(int boxId)
     {
@@ -111,7 +131,7 @@
             {
                 await SlideService.DeleteAsync(slide.Id);
                 Snackbar.Add("Lámina eliminada.", Severity.Success);
-                await Load();
+                await _table.ReloadServerData();
             }
             catch (Exception ex) { Snackbar.Add($"Error al eliminar lámina: {ex.Message}", Severity.Error); }
         }
