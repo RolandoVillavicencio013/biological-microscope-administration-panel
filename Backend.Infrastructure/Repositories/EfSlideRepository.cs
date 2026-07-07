@@ -21,13 +21,39 @@ internal sealed class EfSlideRepository(AppDbContext context) : ISlideRepository
             .Include(s => s.Images)
             .FirstOrDefaultAsync(s => s.Id == id);
 
-    public Task<List<Slide>> ListAsync() =>
-        context.Slides.AsNoTracking().ToListAsync();
-
     public Task<List<Slide>> ListByBoxAsync(int boxId) =>
         context.Slides.AsNoTracking()
             .Where(s => s.BoxId == boxId)
             .ToListAsync();
+
+    public async Task<(List<Slide> Items, int TotalCount)> SearchAsync(
+        string? search, int? boxId, int page, int pageSize)
+    {
+        // Code/Name are mapped through a ValueConverter, so EF Core cannot translate member
+        // access into the wrapped string (e.g. s.Code.Value) for a SQL ILIKE. BoxId narrows the
+        // scan server-side; the text search then runs in memory over that already-small set.
+        var query = context.Slides.AsNoTracking();
+        if (boxId is not null)
+            query = query.Where(s => s.BoxId == boxId);
+
+        var candidates = await query.ToListAsync();
+
+        var matched = string.IsNullOrWhiteSpace(search)
+            ? candidates
+            : candidates
+                .Where(s =>
+                    s.Code.Value.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    s.Name.Value.Contains(search, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+        var items = matched
+            .OrderBy(s => s.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        return (items, matched.Count);
+    }
 
     public async Task<Slide> UpdateAsync(Slide slide)
     {

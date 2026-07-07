@@ -21,11 +21,28 @@ internal class InMemorySlideRepository : ISlideRepository
     public Task<Slide?> ReadAsync(int id) =>
         Task.FromResult(_slides.FirstOrDefault(s => s.Id == id));
 
-    public Task<List<Slide>> ListAsync() =>
-        Task.FromResult(_slides.ToList());
-
     public Task<List<Slide>> ListByBoxAsync(int boxId) =>
         Task.FromResult(_slides.Where(s => s.BoxId == boxId).ToList());
+
+    public Task<(List<Slide> Items, int TotalCount)> SearchAsync(
+        string? search, int? boxId, int page, int pageSize)
+    {
+        IEnumerable<Slide> query = _slides;
+
+        if (boxId is not null)
+            query = query.Where(s => s.BoxId == boxId);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(s =>
+                s.Code.Value.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                s.Name.Value.Contains(search, StringComparison.OrdinalIgnoreCase));
+        }
+
+        var matched = query.ToList();
+        var items = matched.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+        return Task.FromResult((items, matched.Count));
+    }
 
     public Task<Slide> UpdateAsync(Slide slide)
     {
