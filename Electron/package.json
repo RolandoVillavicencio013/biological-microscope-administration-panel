@@ -1,0 +1,48 @@
+{
+  "name": "biomicroscope-admin-desktop",
+  "version": "1.0.0",
+  "description": "Desktop shell for the UCR Biological Microscope Administration Panel",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "cr.ac.ucr.eb.biomicroscopeadmin",
+    "productName": "Panel de Administración Microscopio de Biología",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/embedded-postgres/**/*",
+      "node_modules/@embedded-postgres/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/backend",
+        "to": "backend"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "dependencies": {
+    "embedded-postgres": "^17.10.0-beta.17"
+  }
+}
