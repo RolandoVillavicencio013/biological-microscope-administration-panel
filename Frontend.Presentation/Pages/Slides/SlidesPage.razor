@@ -28,14 +28,12 @@
         </MudButton>
     </ToolBarContent>
     <HeaderContent>
-        <MudTh>Id</MudTh>
         <MudTh>Código</MudTh>
         <MudTh>Nombre</MudTh>
         <MudTh>Caja</MudTh>
         <MudTh Style="text-align:right">Acciones</MudTh>
     </HeaderContent>
     <RowTemplate>
-        <MudTd DataLabel="Id">@context.Id</MudTd>
         <MudTd DataLabel="Código">@context.Code</MudTd>
         <MudTd DataLabel="Nombre">@context.Name</MudTd>
         <MudTd DataLabel="Caja">@BoxName(context.BoxId)</MudTd>
