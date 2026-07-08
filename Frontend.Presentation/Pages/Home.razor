@@ -2,16 +2,15 @@
 
 <PageTitle>Inicio - BioMicroscopio Admin</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Sistema de Administración de Microscopía Biológica</MudText>
+<MudText Typo="Typo.h4" Class="mb-4">Sistema de Administración del Microscopio Virtual de Biología</MudText>
 <MudText Typo="Typo.body1" Class="mb-6">
     Gestione los grupos biológicos, las cajas físicas, las láminas de microscopio y sus imágenes asociadas.
 </MudText>
 
-<MudStack Row="true" Spacing="3" Wrap="Wrap.Wrap">
-    <!-- Grupos Card -->
-    <div style="width: 300px; flex-shrink: 0;">
-        <MudCard Style="height: 100%;">
-            <MudCardContent>
+<MudGrid>
+    <MudItem xs="12" sm="6" md="4" Class="d-flex">
+        <MudCard Class="d-flex flex-column flex-grow-1">
+            <MudCardContent Class="flex-grow-1">
                 <MudIcon Icon="@Icons.Material.Filled.Category" Color="Color.Primary" Size="Size.Large" />
                 <MudText Typo="Typo.h6" Class="mt-2">Grupos</MudText>
                 <MudText Typo="Typo.body2">Organice los grupos biológicos del sistema.</MudText>
@@ -20,12 +19,10 @@
                 <MudButton Href="/groups" Color="Color.Primary">Ir a Grupos</MudButton>
             </MudCardActions>
         </MudCard>
-    </div>
-
-    <!-- Cajas Card -->
-    <div style="width: 300px; flex-shrink: 0;">
-        <MudCard Style="height: 100%;">
-            <MudCardContent>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4" Class="d-flex">
+        <MudCard Class="d-flex flex-column flex-grow-1">
+            <MudCardContent Class="flex-grow-1">
                 <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" Size="Size.Large" />
                 <MudText Typo="Typo.h6" Class="mt-2">Cajas</MudText>
                 <MudText Typo="Typo.body2">Administre las cajas físicas que contienen las láminas.</MudText>
@@ -34,12 +31,10 @@
                 <MudButton Href="/boxes" Color="Color.Primary">Ir a Cajas</MudButton>
             </MudCardActions>
         </MudCard>
-    </div>
-
-    <!-- Láminas Card -->
-    <div style="width: 300px; flex-shrink: 0;">
-        <MudCard Style="height: 100%;">
-            <MudCardContent>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4" Class="d-flex">
+        <MudCard Class="d-flex flex-column flex-grow-1">
+            <MudCardContent Class="flex-grow-1">
                 <MudIcon Icon="@Icons.Material.Filled.Science" Color="Color.Primary" Size="Size.Large" />
                 <MudText Typo="Typo.h6" Class="mt-2">Láminas</MudText>
                 <MudText Typo="Typo.body2">Gestione las láminas de microscopio y sus imágenes.</MudText>
@@ -48,5 +43,5 @@
                 <MudButton Href="/slides" Color="Color.Primary">Ir a Láminas</MudButton>
             </MudCardActions>
         </MudCard>
-    </div>
-</MudStack>
+    </MudItem>
+</MudGrid>

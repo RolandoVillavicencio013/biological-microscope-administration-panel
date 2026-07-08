@@ -52,8 +52,13 @@ internal sealed class BioMicroscopeApiClient(HttpClient http)
         (await http.DeleteAsync($"boxes/{id}")).EnsureSuccessStatusCode();
 
     // Slides
-    public Task<List<SlideResponse>?> GetSlidesAsync() =>
-        http.GetFromJsonAsync<List<SlideResponse>>("slides");
+    public Task<PagedSlidesResponse?> GetSlidesAsync(string? search, int? boxId, int page, int pageSize)
+    {
+        var query = new List<string> { $"page={page}", $"pageSize={pageSize}" };
+        if (!string.IsNullOrWhiteSpace(search)) query.Add($"search={Uri.EscapeDataString(search)}");
+        if (boxId is not null) query.Add($"boxId={boxId}");
+        return http.GetFromJsonAsync<PagedSlidesResponse>($"slides?{string.Join('&', query)}");
+    }
 
     public Task<SlideDetailResponse?> GetSlideAsync(int id) =>
         http.GetFromJsonAsync<SlideDetailResponse>($"slides/{id}");

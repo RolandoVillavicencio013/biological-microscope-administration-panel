@@ -10,12 +10,6 @@ internal sealed class SlideRepository(BioMicroscopeApiClient client) : ISlideRep
     private static SlideDto Map(SlideResponse r) =>
         new(r.Id, r.Code, r.Name, r.BoxId, r.Description, r.Observations);
 
-    public async Task<List<SlideDto>> ListAsync()
-    {
-        var result = await client.GetSlidesAsync() ?? [];
-        return result.Select(Map).ToList();
-    }
-
     public async Task<SlideDetailDto?> GetAsync(int id)
     {
         var r = await client.GetSlideAsync(id);
@@ -29,6 +23,13 @@ internal sealed class SlideRepository(BioMicroscopeApiClient client) : ISlideRep
     {
         var result = await client.GetSlidesByBoxAsync(boxId) ?? [];
         return result.Select(Map).ToList();
+    }
+
+    public async Task<PagedSlidesDto> SearchAsync(string? search, int? boxId, int page, int pageSize)
+    {
+        var result = await client.GetSlidesAsync(search, boxId, page, pageSize)
+            ?? new PagedSlidesResponse([], 0, page, pageSize);
+        return new PagedSlidesDto(result.Items.Select(Map).ToList(), result.TotalCount, result.Page, result.PageSize);
     }
 
     public async Task<SlideDto> CreateAsync(CreateSlideDto dto)
