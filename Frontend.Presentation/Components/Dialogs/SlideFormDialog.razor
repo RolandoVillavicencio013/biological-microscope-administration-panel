@@ -99,7 +99,7 @@
             <!-- ===== 4. IMÁGENES ===== -->
             <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
                 <MudText Typo="Typo.subtitle1"><strong>4. Imágenes</strong></MudText>
-                <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ml-2">opcional · máx. 6</MudChip>
+                <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ml-2">opcional · máx. 6 · puede seleccionar varias a la vez</MudChip>
             </MudStack>
 
             @for (int i = 0; i < _pendingImages.Count; i++)
@@ -113,14 +113,7 @@
                                  Style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
                             @img.FileName
                         </MudText>
-                        <MudSelect T="int" Value="img.Order" ValueChanged="@((int v) => img.Order = v)"
-                                   Label="Orden" Style="width:85px" Dense="true" Variant="Variant.Outlined">
-                            @for (int o = 1; o <= 6; o++)
-                            {
-                                var order = o;
-                                <MudSelectItem T="int" Value="order">@order</MudSelectItem>
-                            }
-                        </MudSelect>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">Orden: @(idx + 1)</MudChip>
                         <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Error"
                                        Size="Size.Small" OnClick="@(() => RemoveImage(idx))" />
                     </MudStack>
@@ -129,11 +122,11 @@
 
             @if (_pendingImages.Count < 6)
             {
-                <MudFileUpload T="IBrowserFile" FilesChanged="OnImageAdded" Accept="image/*">
+                <MudFileUpload T="IReadOnlyList<IBrowserFile>" FilesChanged="OnImagesAdded" Accept="image/*">
                     <ActivatorContent>
                         <MudButton Variant="Variant.Outlined" Size="Size.Small"
                                    StartIcon="@Icons.Material.Filled.AddPhotoAlternate">
-                            Agregar imagen
+                            Agregar imágenes
                         </MudButton>
                     </ActivatorContent>
                 </MudFileUpload>
@@ -230,13 +223,37 @@
         if (firstBox is not null) _selectedBoxId = firstBox.Id;
     }
 
-    private void OnImageAdded(IBrowserFile? file)
+    private async Task OnImagesAdded(IReadOnlyList<IBrowserFile>? files)
     {
-        if (file is null || _pendingImages.Count >= 6) return;
-        var nextOrder = _pendingImages.Count > 0
-            ? Math.Min(_pendingImages.Max(x => x.Order) + 1, 6)
-            : 1;
-        _pendingImages.Add(new PendingImage(file, file.Name, nextOrder));
+        if (files is null || files.Count == 0) return;
+
+        var remainingSlots = 6 - _pendingImages.Count;
+        if (remainingSlots <= 0) return;
+
+        var toAdd = files.Take(remainingSlots).ToList();
+        if (files.Count > remainingSlots)
+        {
+            Snackbar.Add($"Solo se agregaron {toAdd.Count} de {files.Count} imágenes (máximo 6 por lámina).",
+                Severity.Warning);
+        }
+
+        foreach (var file in toAdd)
+        {
+            try
+            {
+                // Read the file into memory immediately: once this component re-renders with
+                // 6 pending images the upload input unmounts, and Blazor WASM invalidates the
+                // browser-side file handle for any IBrowserFile whose stream hasn't been read yet.
+                await using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+                using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                _pendingImages.Add(new PendingImage(ms.ToArray(), file.Name));
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error leyendo \"{file.Name}\": {ex.Message}", Severity.Warning);
+            }
+        }
     }
 
     private void RemoveImage(int index) => _pendingImages.RemoveAt(index);
@@ -290,16 +307,15 @@
                 string.IsNullOrWhiteSpace(_description) ? null : _description,
                 string.IsNullOrWhiteSpace(_observations) ? null : _observations));
 
-            // 4. Upload any pending images
-            foreach (var img in _pendingImages)
+            // 4. Upload any pending images. Order is the image's position in the list (1-based),
+            // so uploaded images can never collide on the same order value.
+            for (var i = 0; i < _pendingImages.Count; i++)
             {
+                var img = _pendingImages[i];
                 try
                 {
-                    using var ms = new MemoryStream();
-                    await using var stream = img.File.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-                    await stream.CopyToAsync(ms);
-                    ms.Position = 0;
-                    await ImageService.UploadAsync(slide.Id, ms, img.FileName, img.Order);
+                    using var ms = new MemoryStream(img.Content);
+                    await ImageService.UploadAsync(slide.Id, ms, img.FileName, i + 1);
                 }
                 catch (Exception ex)
                 {
@@ -321,10 +337,9 @@
 
     private void Cancel() => MudDialog.Cancel();
 
-    private sealed class PendingImage(IBrowserFile? file, string fileName, int order)
+    private sealed class PendingImage(byte[] content, string fileName)
     {
-        public IBrowserFile? File { get; } = file;
+        public byte[] Content { get; } = content;
         public string FileName { get; } = fileName;
-        public int Order { get; set; } = order;
     }
 }
