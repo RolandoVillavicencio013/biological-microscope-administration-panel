@@ -2,6 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using UCR.EB.BioMicroscopeAdmin.Backend.DependencyInjection;
 using UCR.EB.BioMicroscopeAdmin.Backend.Infrastructure.Persistence;
 
+// wwwroot está en .gitignore (se genera en el publish), pero UseStaticFiles
+// resuelve su WebRootFileProvider al construir el host: si la carpeta no
+// existe en ese momento queda fijo a un NullFileProvider y nunca sirve los
+// archivos subidos después, aunque LocalFileStorageService los cree en disco.
+Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"));
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();

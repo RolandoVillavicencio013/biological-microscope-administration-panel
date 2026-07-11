@@ -1,3 +1,6 @@
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+
 <MudNavMenu>
     <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Inicio</MudNavLink>
     <MudNavLink Href="/groups" Icon="@Icons.Material.Filled.Category">Grupos</MudNavLink>
@@ -5,5 +8,15 @@
     <MudNavLink Href="/slides" Icon="@Icons.Material.Filled.Science">Láminas</MudNavLink>
     <MudDivider Class="my-2" />
     <MudNavLink Href="/guia-de-uso" Icon="@Icons.Material.Filled.MenuBook">Guía de Uso</MudNavLink>
-    <MudNavLink Href="/swagger" Target="_blank" Icon="@Icons.Material.Filled.Api">Documentación API</MudNavLink>
+    <MudNavLink Href="@SwaggerUrl" Target="_blank" Icon="@Icons.Material.Filled.Api">Documentación API</MudNavLink>
 </MudNavMenu>
+
+@code {
+    // En desarrollo el frontend (WASM dev server) y el backend corren en
+    // puertos distintos, así que un href relativo "/swagger" se resuelve
+    // contra el origen del frontend en vez del backend. En el empaquetado
+    // de escritorio ambos son el mismo origen, pero apuntar siempre al
+    // ApiBaseUrl configurado funciona en los dos casos.
+    private string SwaggerUrl =>
+        (Configuration["ApiBaseUrl"] ?? "http://localhost:5138/").TrimEnd('/') + "/swagger";
+}
